@@ -4,7 +4,7 @@ import ctypes
 import time
 from datetime import datetime
 
-SERVER_URL = "wss://characteristic-iolande-fgdsfgd3125243-53730f15.koyeb.app/ws"  # Change this to your server's IP
+SERVER_URL = "wss://puny-gabriel-fgdsfgd3125243-4bb6adf4.koyeb.app/ws"  # Change this to your server's IP
 
 def send_media_play_pause():
     """Sends a real media play/pause command like a keyboard."""

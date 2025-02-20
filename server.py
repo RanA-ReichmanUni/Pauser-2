@@ -43,7 +43,6 @@ async def home():
                     const data = await response.json();
                     document.getElementById("status").innerText = data.message;
                     
-                    // Update icon based on confirmation status
                     if (data.confirmed) {
                         document.getElementById("confirmation_icon").innerText = "✔️";
                     } else {
@@ -105,17 +104,34 @@ async def send_alert(minutes: int):
                 <style>
                     body {{ text-align: center; font-family: Arial, sans-serif; background-color: #f4f4f4; }}
                     .container {{ margin-top: 100px; }}
-                    .icon {{ font-size: 80px; color: #4CAF50; }}
+                    .icon {{ font-size: 100px; color: #4CAF50; }}
                     h2 {{ color: #333; }}
+                    #status {{ font-weight: bold; font-size: 24px; }}
+                    #confirmation_icon {{ font-size: 100px; }}
                 </style>
             </head>
             <body>
                 <div class="container">
-                    <div class="icon">✔️</div>
                     <h2>Request sent for {minutes} minutes</h2>
                     <p>Waiting for client confirmation...</p>
+                    <div id="confirmation_icon">❌</div>
+                    <p id="status">Pending confirmation...</p>
                     <p><a href="/" style="color:blue;">Go back</a></p>
                 </div>
+                <script>
+                    async function checkStatus() {
+                        const response = await fetch('/status');
+                        const data = await response.json();
+                        document.getElementById("status").innerText = data.message;
+
+                        if (data.confirmed) {
+                            document.getElementById("confirmation_icon").innerText = "✔️";
+                        } else {
+                            document.getElementById("confirmation_icon").innerText = "❌";
+                        }
+                    }
+                    setInterval(checkStatus, 2000);
+                </script>
             </body>
         </html>
         """
