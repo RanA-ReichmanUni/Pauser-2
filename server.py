@@ -11,18 +11,18 @@ confirmations = {}  # Store alert confirmation status
 @app.get("/", response_class=HTMLResponse)
 async def home():
     """Homepage with instructions and alert links."""
-    return """
+    return HTMLResponse(content=f"""
     <html>
         <head>
             <title>FastAPI Alert Server</title>
             <style>
-                body { text-align: center; font-family: Arial, sans-serif; background-color: #f4f4f4; }
-                .container { margin-top: 100px; }
-                .button { display: inline-block; padding: 10px 20px; margin: 10px; font-size: 20px;
-                          background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
-                .button:hover { background-color: #45a049; }
-                #status { font-weight: bold; font-size: 24px; }
-                #confirmation_icon { font-size: 100px; }
+                body {{ text-align: center; font-family: Arial, sans-serif; background-color: #f4f4f4; }}
+                .container {{ margin-top: 100px; }}
+                .button {{ display: inline-block; padding: 10px 20px; margin: 10px; font-size: 20px;
+                          background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }}
+                .button:hover {{ background-color: #45a049; }}
+                #status {{ font-weight: bold; font-size: 24px; }}
+                #confirmation_icon {{ font-size: 100px; }}
             </style>
         </head>
         <body>
@@ -38,22 +38,22 @@ async def home():
                 <p id="status">No alerts sent yet.</p>
             </div>
             <script>
-                async function checkStatus() {
-                    const response = await fetch('/status');
-                    const data = await response.json();
+                async function checkStatus() {{
+                    let response = await fetch('/status');
+                    let data = await response.json();
                     document.getElementById("status").innerText = data.message;
 
-                    if (data.confirmed) {
+                    if (data.confirmed) {{
                         document.getElementById("confirmation_icon").innerText = "✔️";
-                    } else {
+                    }} else {{
                         document.getElementById("confirmation_icon").innerText = "❌";
-                    }
-                }
+                    }}
+                }}
                 setInterval(checkStatus, 2000);
             </script>
         </body>
     </html>
-    """
+    """)
 
 
 @app.websocket("/ws")
@@ -107,8 +107,7 @@ async def send_alert(minutes: int):
     # Start sending alerts in the background
     asyncio.create_task(send_multiple_alerts())
 
-    return HTMLResponse(
-        content=f"""
+    return HTMLResponse(content=f"""
         <html>
             <head>
                 <title>Request Sent</title>
@@ -130,23 +129,22 @@ async def send_alert(minutes: int):
                     <p><a href="/" style="color:blue;">Go back</a></p>
                 </div>
                 <script>
-                    async function checkStatus() {
-                        const response = await fetch('/status');
-                        const data = await response.json();
+                    async function checkStatus() {{
+                        let response = await fetch('/status');
+                        let data = await response.json();
                         document.getElementById("status").innerText = data.message;
 
-                        if (data.confirmed) {
+                        if (data.confirmed) {{
                             document.getElementById("confirmation_icon").innerText = "✔️";
-                        } else {
+                        }} else {{
                             document.getElementById("confirmation_icon").innerText = "❌";
-                        }
-                    }
+                        }}
+                    }}
                     setInterval(checkStatus, 2000);
                 </script>
             </body>
         </html>
-        """
-    )
+    """)
 
 
 @app.get("/status")
