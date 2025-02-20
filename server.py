@@ -42,7 +42,7 @@ async def home():
                     const response = await fetch('/status');
                     const data = await response.json();
                     document.getElementById("status").innerText = data.message;
-                    
+
                     if (data.confirmed) {
                         document.getElementById("confirmation_icon").innerText = "✔️";
                     } else {
@@ -82,7 +82,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/alert/{minutes}", response_class=HTMLResponse)
 async def send_alert(minutes: int):
-    """Send an alert to all connected clients and return a confirmation page."""
+    """Send an alert to all connected clients (10 times with 1s delay)."""
     if minutes not in [1, 2, 5, 10]:
         return HTMLResponse(
             content="<h2 style='color:red;'>Invalid duration! Choose 1, 2, 5, or 10 minutes.</h2>",
@@ -91,10 +91,21 @@ async def send_alert(minutes: int):
 
     confirmations[minutes] = False  # Reset confirmation status
 
-    # Send alert to connected WebSocket clients
-    message = f"resume,{minutes}"
-    for client in clients:
-        await client.send_text(message)
+    async def send_multiple_alerts():
+        """Send the alert 10 times with 1-second delay."""
+        for i in range(10):
+            message = f"resume,{minutes}"
+            for client in clients:
+                try:
+                    await client.send_text(message)
+                    print(f"Sent alert {i + 1}/10 for {minutes} minutes")
+                except:
+                    print("Failed to send alert to a client, removing...")
+                    clients.remove(client)
+            await asyncio.sleep(1)
+
+    # Start sending alerts in the background
+    asyncio.create_task(send_multiple_alerts())
 
     return HTMLResponse(
         content=f"""
@@ -149,7 +160,7 @@ async def status():
             message = f"Alert for {minutes} minutes was received by the client."
         else:
             message = f"Alert for {minutes} minutes is waiting for confirmation."
-    
+
     return {"message": message, "confirmed": confirmed}
 
 
