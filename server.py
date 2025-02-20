@@ -7,6 +7,7 @@ app = FastAPI()
 
 clients = set()
 confirmations = {}  # Store alert confirmation status
+pending_alerts = {}  # Store active alert sending tasks
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
@@ -61,28 +62,34 @@ async def websocket_endpoint(websocket: WebSocket):
     """Handle WebSocket connections from clients."""
     await websocket.accept()
     clients.add(websocket)
-    print("Client connected.")
+    print("✅ Client connected.")
 
     try:
         while True:
             message = await websocket.receive_text()
+            print(f"📩 Received message: {message}")
 
             if message.startswith("ack"):
                 _, minutes = message.split(",")
                 confirmations[minutes] = True  # Mark alert as acknowledged
-                print(f"Client acknowledged alert for {minutes} minutes.")
+                print(f"✅ Client acknowledged alert for {minutes} minutes.")
+
+                # Cancel remaining alerts for this duration
+                if minutes in pending_alerts:
+                    pending_alerts[minutes].cancel()
+                    print(f"🛑 Stopped remaining alerts for {minutes} minutes.")
 
             elif message == "pong":
-                print("Received pong from client, connection is alive.")
+                print("🔁 Pong received, connection is alive.")
 
-    except:
+    except Exception as e:
+        print(f"⚠️ Client disconnected: {e}")
         clients.remove(websocket)
-        print("Client disconnected.")
 
 
 @app.get("/alert/{minutes}", response_class=HTMLResponse)
 async def send_alert(minutes: int):
-    """Send an alert to all connected clients (10 times with 1s delay)."""
+    """Send an alert to all connected clients (up to 10 times, 1 second apart, but stop if acknowledged)."""
     if minutes not in [1, 2, 5, 10]:
         return HTMLResponse(
             content="<h2 style='color:red;'>Invalid duration! Choose 1, 2, 5, or 10 minutes.</h2>",
@@ -92,20 +99,26 @@ async def send_alert(minutes: int):
     confirmations[minutes] = False  # Reset confirmation status
 
     async def send_multiple_alerts():
-        """Send the alert 10 times with 1-second delay."""
+        """Send the alert 10 times, but stop if the client acknowledges."""
         for i in range(10):
+            if confirmations.get(str(minutes), False):  # Stop if already acknowledged
+                print(f"✅ Stopping alert sequence for {minutes} minutes (client confirmed).")
+                break
+
             message = f"resume,{minutes}"
             for client in clients:
                 try:
                     await client.send_text(message)
-                    print(f"Sent alert {i + 1}/10 for {minutes} minutes")
+                    print(f"📢 Sent alert {i + 1}/10 for {minutes} minutes.")
                 except:
-                    print("Failed to send alert to a client, removing...")
+                    print("❌ Failed to send alert to a client, removing...")
                     clients.remove(client)
+
             await asyncio.sleep(1)
 
-    # Start sending alerts in the background
-    asyncio.create_task(send_multiple_alerts())
+    # Start sending alerts in the background and store the task
+    task = asyncio.create_task(send_multiple_alerts())
+    pending_alerts[str(minutes)] = task  # Track the running task
 
     return HTMLResponse(content=f"""
         <html>
@@ -155,9 +168,9 @@ async def status():
     for minutes, status in confirmations.items():
         if status:
             confirmed = True
-            message = f"Alert for {minutes} minutes was received by the client."
+            message = f"✅ Alert for {minutes} minutes was received by the client."
         else:
-            message = f"Alert for {minutes} minutes is waiting for confirmation."
+            message = f"⌛ Alert for {minutes} minutes is waiting for confirmation."
 
     return {"message": message, "confirmed": confirmed}
 
@@ -170,7 +183,7 @@ async def ping_clients():
                 await client.send_text("ping")
             except:
                 clients.remove(client)
-                print("Client removed due to disconnection.")
+                print("⚠️ Client removed due to disconnection.")
         await asyncio.sleep(30)
 
 
